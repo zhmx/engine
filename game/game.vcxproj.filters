@@ -19,6 +19,9 @@
     <Filter Include="lpeg">
       <UniqueIdentifier>{c1960e29-b247-47fa-bede-b7c736a2db3a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="md5">
+      <UniqueIdentifier>{0b523fd5-d22f-4129-857d-bb981cc624f4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -63,6 +66,9 @@
     <ClCompile Include="lpeg\lpvm.c">
       <Filter>lpeg</Filter>
     </ClCompile>
+    <ClCompile Include="md5\md5.cpp">
+      <Filter>md5</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h">
@@ -100,6 +106,9 @@
     </ClInclude>
     <ClInclude Include="lpeg\lpvm.h">
       <Filter>lpeg</Filter>
+    </ClInclude>
+    <ClInclude Include="md5\md5.h">
+      <Filter>md5</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

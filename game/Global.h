@@ -54,6 +54,8 @@ public:
 	~CGlobal();
 
 	static void Stop();
+	static std::string md5(const char* str);
+
 	static unsigned char STATIC_ON_ACCEPT;
 	static unsigned char STATIC_ON_DATA;
 	static unsigned char STATIC_ON_DISCONNECT;

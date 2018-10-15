@@ -1,4 +1,5 @@
 #include "Global.h"
+#include "md5/md5.h"
 
 kaguya::State *g_pKaguyaState = new kaguya::State;
 lua_State *g_luaState = g_pKaguyaState->state();
@@ -36,4 +37,13 @@ void CGlobal::Stop()
 	{
 		g_pIO->stop();
 	}
+}
+
+std::string CGlobal::md5(const char* pStr)
+{
+	if (pStr == NULL)
+	{
+		return "";
+	}
+	return MD5(pStr).toStr();
 }
