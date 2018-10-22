@@ -163,6 +163,7 @@
     <ClCompile Include="DB.cpp" />
     <ClCompile Include="engine.cpp" />
     <ClCompile Include="Global.cpp" />
+    <ClCompile Include="Http.cpp" />
     <ClCompile Include="lpeg\lpcap.c" />
     <ClCompile Include="lpeg\lpcode.c" />
     <ClCompile Include="lpeg\lpprint.c" />
@@ -177,6 +178,7 @@
     <ClInclude Include="Client.h" />
     <ClInclude Include="DB.h" />
     <ClInclude Include="Global.h" />
+    <ClInclude Include="Http.h" />
     <ClInclude Include="lpeg\lpcap.h" />
     <ClInclude Include="lpeg\lpcode.h" />
     <ClInclude Include="lpeg\lpprint.h" />

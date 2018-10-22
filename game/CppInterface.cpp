@@ -3,6 +3,8 @@
 #include "Server.h"
 #include "Client.h"
 #include "DB.h"
+#include "Http.h"
+
 
 extern "C"
 {
@@ -65,6 +67,14 @@ void BindInterfaceToLua(kaguya::State *pKaguyaState)
 		.setConstructors<CMongo(std::string, unsigned int, std::string, std::string)>()
 		.addFunction("GetDB", &CMongo::GetDB)
 		.addFunction("GetCollection", &CMongo::GetCollection)
+	);
+	// web http post get
+	(*pKaguyaState)["CHttp"].setClass(kaguya::UserdataMetatable<CHttp>()
+		.setConstructors<CHttp()>()
+		.addFunction("GetPost", &CHttp::GetPost)
+		.addFunction("RegCallBack", &CHttp::RegCallBack)
+		.addFunction("Stop", &CHttp::Stop)
+		.addFunction("GetAddress", &CHttp::GetAddress)
 	);
 
 	pKaguyaState->openlib("sproto.core", &luaopen_sproto_core);

@@ -38,12 +38,13 @@ void CServer::Stop()
 
 	m_pAcceptor->close();
 
+	// 链接清理和通知
 	std::set<CConnector *>::iterator it = m_conMgr_set.begin();
-	for (; it != m_conMgr_set.end(); ++it)
+	it = m_conMgr_set.begin();
+	for (; it != m_conMgr_set.end();)
 	{
-		delete *it;
+		it = EraseConnector(*it);
 	}
-	m_conMgr_set.clear();
 }
 
 void CServer::StartAccept()
@@ -60,20 +61,23 @@ void CServer::StartAccept()
 	);
 }
 
-void CServer::EraseConnector(CConnector* pConnector)
+std::set<CConnector*>::iterator CServer::EraseConnector(CConnector* pConnector)
 {
 	if (pConnector == NULL)
 	{
-		return ;
+		return m_conMgr_set.end();
 	}
 	std::set<CConnector*>::iterator it = m_conMgr_set.find(pConnector);
 	if (it == m_conMgr_set.end())
 	{
-		return ;
+		return m_conMgr_set.end();
 	}
-	CConnector *pTemp = *it;
-	m_conMgr_set.erase(it);
-	delete pTemp;
+
+	int tmp_iAddress = pConnector->m_iAddress;
+
+	delete pConnector;
+	pConnector = NULL;
+	it = m_conMgr_set.erase(it); // 返回下一个迭代器
 
 	std::cout << "[NORMAL] " << "connect disconnected and remove" << std::endl;
 
@@ -81,8 +85,10 @@ void CServer::EraseConnector(CConnector* pConnector)
 	if (it_fun != m_mapCallbackFun.end())
 	{
 		// 调用lua全局函数 断线通知
-		(*g_pKaguyaState)[it_fun->second](pConnector);
+		(*g_pKaguyaState)[it_fun->second](tmp_iAddress);
 	}
+
+	return it;
 }
 
 boost::asio::ip::tcp::acceptor* CServer::GetAcceptor()
@@ -113,6 +119,7 @@ void CServer::OnAcceptHandle(const boost::system::error_code& e, CConnector* pCo
 	{
 		std::cout << "[NORMAL] " << "CServer::OnAcceptHandle accept listen error" << std::endl;
 		delete pConnector;
+
 		return ;
 	}
 	m_conMgr_set.insert(pConnector);
@@ -123,7 +130,7 @@ void CServer::OnAcceptHandle(const boost::system::error_code& e, CConnector* pCo
 	if (it != m_mapCallbackFun.end())
 	{
 		// 调用lua全局函数 连接通知
-		(*g_pKaguyaState)[it->second](pConnector);
+		(*g_pKaguyaState)[it->second](pConnector, pConnector->m_iAddress);
 	}
 
 	StartAccept();
@@ -134,6 +141,7 @@ void CServer::OnAcceptHandle(const boost::system::error_code& e, CConnector* pCo
 CConnector::CConnector(CServer* p_server):
 	m_pserver(p_server)
 {
+	m_iAddress = reinterpret_cast<int>(this);
 	m_pSocket = new boost::asio::ip::tcp::socket(*g_pIO);
 }
 
@@ -143,11 +151,7 @@ CConnector::~CConnector()
 	{
 		m_pSocket->close();
 	}
-	if (m_pSocket)
-	{
-		delete m_pSocket;
-		m_pSocket = NULL;
-	}
+	delete m_pSocket;
 }
 
 void CConnector::Start()
@@ -244,7 +248,7 @@ void CConnector::BodyReadHandle(const boost::system::error_code& err, std::size_
 	{
 		// 调用lua全局函数 数据通知
 		std::string str(m_buffer_array.data(), bytes_transferred);
-		(*g_pKaguyaState)[it->second](this, msgId, str);
+		(*g_pKaguyaState)[it->second](m_iAddress, msgId, str);
 	}
 
 	// 继续监听链接

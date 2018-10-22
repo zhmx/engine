@@ -12,6 +12,8 @@ package.path = package.path .. ';./scripts/?.lua;'
 local CGlobal = CGlobal;
 local CServer = CServer;
 local CClient = CClient;
+local CHttp = CHttp;
+
 local Mongo = require("mongo");
 local table = require("table");
 local sprotoLoader = require("data.sprotoLoader");
@@ -22,7 +24,11 @@ function OnSecTimer( ... )
 end
 
 local TestServer = CServer.new(1000);
+print("TestServer", TestServer);
 local TestClient = CClient.new();
+print("TestClient", TestClient);
+local TestHttp = CHttp.new();
+print("TestHttp", TestHttp);
 
 local User = {
 	id = 1,
@@ -64,13 +70,15 @@ local helloServer = [[this is a test code from client to server say hello!!!!!!!
 		end 
 	end 
 --]]
-function TestServer_STATIC_ON_ACCEPT(connector)
-	print("TestServer_STATIC_ON_ACCEPT", connector);
+local clients = {};
+function TestServer_STATIC_ON_ACCEPT(connector, iConnectorAddr)
+	print("TestServer_STATIC_ON_ACCEPT", connector, iConnectorAddr);
+	clients[iConnectorAddr] = connector;
 end 
-function TestServer_STATIC_ON_DATA(connector, msgId, data)
-	print("TestServer_STATIC_ON_DATA", connector, msgId, #data, data);
+function TestServer_STATIC_ON_DATA(iConnectorAddr, msgId, data)
+	print("TestServer_STATIC_ON_DATA", iConnectorAddr, msgId, #data, data);
 	-- local data = helloClient;
-	-- connector:Send(msgId, data, #data);
+	-- clients[iConnectorAddr]:Send(msgId, data, #data);
 
 	-- local type, name, request, response = sprotoLoader.server:dispatch(data);
 	-- print(type, name, response);
@@ -79,7 +87,7 @@ function TestServer_STATIC_ON_DATA(connector, msgId, data)
 	-- end 
 	-- local data = response(User);
 	-- print("TestServer_STATIC_ON_DATA send", #data);
-	-- connector:Send(data, #data);
+	-- clients[iConnectorAddr]:Send(data, #data);
 
 	local proto = sprotoLoader.sessionMap[msgId];
 	local recv = sprotoLoader.protops:request_decode(proto, data);
@@ -88,10 +96,12 @@ function TestServer_STATIC_ON_DATA(connector, msgId, data)
 	end 
 	local data = sprotoLoader.protops:response_encode(proto, {userinfo = User});
 	print("server send #data", #data);
-	connector:Send(msgId, data, #data);
+	-- clients[iConnectorAddr]:Send(msgId, data, #data);
+	clients[iConnectorAddr]:Send(msgId, data, #data);
 end 
-function TestServer_STATIC_ON_DISCONNECT(connector)
-	print("TestServer_STATIC_ON_DISCONNECT", connector);
+function TestServer_STATIC_ON_DISCONNECT(iConnectorAddr)
+	print("TestServer_STATIC_ON_DISCONNECT", iConnectorAddr, clients[iConnectorAddr]);
+	clients[iConnectorAddr] = nil;
 end 
 
 
@@ -134,6 +144,20 @@ function TestClient_STATIC_ON_DISCONNECT()
 	print("TestClient_STATIC_ON_DISCONNECT");
 end 
 
+
+function TestHttp_ON_DATA(iAddress, header, body)
+	print("TestHttp_ON_DATA", iAddress);
+	-- print("11111111");
+	-- print(header);
+	-- print(body);
+	-- body
+	TestHttp:Stop(); -- 接收完毕 防止disconnect回调
+end
+function TestHttp_ON_DISCONNECT(iAddress, msg)
+	print("TestHttp_ON_DISCONNECT", iAddress, msg);
+	-- body
+end
+
 xpcall(
 	function ( ... )
 		local data = {_id = "123", val = "val", param1 = 1, param2 = 2, tab = {[2] = 2, [3] = 3}};
@@ -154,19 +178,24 @@ xpcall(
 		-- local status = mongo:DropTab("table");
 		-- print(status);
 
-		-- Server
-		TestServer:RegCallBack(CGlobal.STATIC_ON_ACCEPT, "TestServer_STATIC_ON_ACCEPT");
-		TestServer:RegCallBack(CGlobal.STATIC_ON_DATA, "TestServer_STATIC_ON_DATA");
-		TestServer:RegCallBack(CGlobal.STATIC_ON_DISCONNECT, "TestServer_STATIC_ON_DISCONNECT");
-		TestServer:StartAccept();
+		-- -- Server
+		-- TestServer:RegCallBack(CGlobal.STATIC_ON_ACCEPT, "TestServer_STATIC_ON_ACCEPT");
+		-- TestServer:RegCallBack(CGlobal.STATIC_ON_DATA, "TestServer_STATIC_ON_DATA");
+		-- TestServer:RegCallBack(CGlobal.STATIC_ON_DISCONNECT, "TestServer_STATIC_ON_DISCONNECT");
+		-- TestServer:StartAccept();
 
-		-- Client
-		TestClient:RegCallBack(CGlobal.STATIC_ON_ACCEPT, "TestClient_STATIC_ON_ACCEPT");
-		TestClient:RegCallBack(CGlobal.STATIC_ON_DATA, "TestClient_STATIC_ON_DATA");
-		TestClient:RegCallBack(CGlobal.STATIC_ON_DISCONNECT, "TestClient_STATIC_ON_DISCONNECT");
-		TestClient:Connect("", 1000);
+		-- -- Client
+		-- TestClient:RegCallBack(CGlobal.STATIC_ON_ACCEPT, "TestClient_STATIC_ON_ACCEPT");
+		-- TestClient:RegCallBack(CGlobal.STATIC_ON_DATA, "TestClient_STATIC_ON_DATA");
+		-- TestClient:RegCallBack(CGlobal.STATIC_ON_DISCONNECT, "TestClient_STATIC_ON_DISCONNECT");
+		-- TestClient:Connect("", 1000);
 		
-
+		-- http
+		assert(TestHttp:RegCallBack(CGlobal.STATIC_ON_DATA, "TestHttp_ON_DATA"));
+		assert(TestHttp:RegCallBack(CGlobal.STATIC_ON_DISCONNECT, "TestHttp_ON_DISCONNECT"));
+		TestHttp:GetPost("GET", "www.baidu.com", "/?tn=93380420_hao_pg", "");
+		local iAddress = TestHttp:GetAddress();
+		print(iAddress);
 
 	end, function (err)
 		print(err);

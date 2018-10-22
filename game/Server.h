@@ -17,6 +17,11 @@ public:
 	boost::asio::ip::tcp::socket* GetSocket();
 	std::string GetIP();
 
+
+public:
+	int m_iAddress;
+
+
 private:
 	// 这个方法一调用后 该对象就要被舍弃 不能再使用这个类对象
 	void Stop();
@@ -37,7 +42,7 @@ public:
 
 	void Stop();
 	void StartAccept();
-	void EraseConnector(CConnector* pConnector);
+	std::set<CConnector*>::iterator EraseConnector(CConnector* pConnector);
 	boost::asio::ip::tcp::acceptor* GetAcceptor();
 	bool RegCallBack(unsigned short type, std::string strCallbackFun);
 

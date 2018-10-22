@@ -67,8 +67,6 @@ int main(int argc, char* argv[])
 		delete g_pTimer;
 		g_pTimer = NULL;
 	}
-	delete g_pIO;
-	g_pIO = NULL;
 
 	delete[] g_pSendbuff;
 	g_pSendbuff = NULL;
@@ -78,7 +76,9 @@ int main(int argc, char* argv[])
 
 	std::cout << "[NORMAL] " << "APP EXIT! please enter any character ...";
 
-	int iTmp = getchar();
+	int iTmp = getchar(); // pause
+	delete g_pIO;
+	g_pIO = NULL;
 
 	return 0;
 }
