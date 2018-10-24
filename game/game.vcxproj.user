@@ -4,6 +4,8 @@
     <LocalDebuggerEnvironment>PATH=G:\chromeDown\mongo-c-driver-master\cmake-build-win32-debug\mongo-c-driver\bin
 $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments>
+    </LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LocalDebuggerEnvironment>PATH=G:\chromeDown\mongo-c-driver-master\cmake-build-win64-debug\mongo-c-driver\bin

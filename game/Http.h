@@ -8,7 +8,7 @@ public:
 	CHttp();
 	virtual ~CHttp();
 
-	void GetPost(std::string strType, std::string strUrl, std::string strPage, std::string strData);
+	void GetPost(const char* pType, const char* pUrl, const char* pPage, const char* pPostData);
 	void Stop();
 	bool RegCallBack(unsigned short type, std::string strCallbackFun);
 	int GetAddress();

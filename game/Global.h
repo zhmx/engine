@@ -7,10 +7,10 @@
 #include "mongoc.h"
 #include "bson/bcon.h"
 
-extern kaguya::State *g_pKaguyaState;
+extern kaguya::State g_kaguyaState;
 extern lua_State *g_luaState;
-extern boost::asio::io_context *g_pIO;
-extern boost::asio::deadline_timer *g_pTimer;
+extern boost::asio::io_context g_IO;
+extern boost::asio::deadline_timer g_timer;
 extern boost::asio::signal_set g_single;
 extern std::string g_strSecTimer;
 extern char* g_pSendbuff;

@@ -1,61 +1,68 @@
 #include "Server.h"
 #include "boost/bind/bind.hpp"
 
-CServer::CServer(unsigned short usPort):
-	m_pAcceptor(new boost::asio::ip::tcp::acceptor(*g_pIO))
+CServer::CServer():
+	m_acceptor(g_IO), m_usPort(0)
 {
-	if (usPort > MAXPORT || usPort <= MINPORT)
-	{
-		std::cout << "[ERROR] " << "CServer::Listen " << "port invalid" << std::endl;
-		return;
-	}
-	std::cout << "[NORMAL] " << "CServer::CServer " << " init listen on port: " << usPort << std::endl;
-	
-	boost::system::error_code ec;
-	boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), usPort);
-	m_pAcceptor->open(endpoint.protocol());
-	m_pAcceptor->set_option(boost::asio::ip::tcp::acceptor::reuse_address(false));
-	m_pAcceptor->bind(endpoint, ec);
-	if (ec)
-	{
-		m_pAcceptor->close();
-		std::cout << "[ERROR] " << "CServer::CServer " << ec.message() << std::endl;
-		return;
-	}
-	m_pAcceptor->listen();
 }
 
 CServer::~CServer()
 {
 	Stop();
-	delete m_pAcceptor;
-	m_pAcceptor = NULL;
 }
 
 void CServer::Stop()
 {
 	std::cout << "[WARNING] " << "CServer::Stop " << "get single term or quit" << std::endl;
 
-	m_pAcceptor->close();
+	m_acceptor.close();
 
 	// 链接清理和通知
 	std::set<CConnector *>::iterator it = m_conMgr_set.begin();
-	it = m_conMgr_set.begin();
 	for (; it != m_conMgr_set.end();)
 	{
 		it = EraseConnector(*it);
 	}
 }
 
+void CServer::StartListen(unsigned short usPort)
+{
+	if (usPort == 0)
+	{
+		usPort = m_usPort; // 重新监听默认使用上一次的监听端口
+	}
+	if (usPort > MAXPORT || usPort <= MINPORT)
+	{
+		std::cout << "[ERROR] " << "CServer::StartListen " << "port invalid" << std::endl;
+		return;
+	}
+	m_usPort = usPort;
+	std::cout << "[NORMAL] " << "CServer::StartListen " << " init listen on port: " << usPort << std::endl;
+
+	boost::system::error_code ec;
+	boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), usPort);
+	m_acceptor.open(endpoint.protocol());
+	m_acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(false));
+	m_acceptor.bind(endpoint, ec);
+	if (ec)
+	{
+		m_acceptor.close();
+		std::cout << "[ERROR] " << "CServer::StartListen " << ec.message() << std::endl;
+		return;
+	}
+	m_acceptor.listen();
+	StartAccept();
+}
+
 void CServer::StartAccept()
 {
-	if (!m_pAcceptor->is_open())
+	if (!m_acceptor.is_open())
 	{
-		std::cout << "[ERROR] " << "CServer::StartAccept server listen error"<< std::endl;
-		return ;
+		std::cout << "[ERROR] " << "CServer::StartAccept " << "acceptor has not open" << std::endl;
+		return;
 	}
 	CConnector *p_connector = new CConnector(this); // 创建新的链接对象
-	m_pAcceptor->async_accept(
+	m_acceptor.async_accept(
 		*(p_connector->GetSocket()),
 		boost::bind(&CServer::OnAcceptHandle, this, boost::asio::placeholders::error, p_connector)
 	);
@@ -73,7 +80,7 @@ std::set<CConnector*>::iterator CServer::EraseConnector(CConnector* pConnector)
 		return m_conMgr_set.end();
 	}
 
-	int tmp_iAddress = pConnector->m_iAddress;
+	int tmp_iAddress = pConnector->GetAddress();
 
 	delete pConnector;
 	pConnector = NULL;
@@ -85,7 +92,7 @@ std::set<CConnector*>::iterator CServer::EraseConnector(CConnector* pConnector)
 	if (it_fun != m_mapCallbackFun.end())
 	{
 		// 调用lua全局函数 断线通知
-		(*g_pKaguyaState)[it_fun->second](tmp_iAddress);
+		g_kaguyaState[it_fun->second](tmp_iAddress);
 	}
 
 	return it;
@@ -93,7 +100,7 @@ std::set<CConnector*>::iterator CServer::EraseConnector(CConnector* pConnector)
 
 boost::asio::ip::tcp::acceptor* CServer::GetAcceptor()
 {
-	return m_pAcceptor;
+	return &m_acceptor;
 }
 
 bool CServer::RegCallBack(unsigned short type, std::string strCallbackFun)
@@ -115,14 +122,14 @@ bool CServer::RegCallBack(unsigned short type, std::string strCallbackFun)
 
 void CServer::OnAcceptHandle(const boost::system::error_code& e, CConnector* pConnector)
 {
-	if (pConnector == NULL || !m_pAcceptor->is_open())
+	if (e)
 	{
 		std::cout << "[NORMAL] " << "CServer::OnAcceptHandle accept listen error" << std::endl;
 		delete pConnector;
 
 		return ;
 	}
-	m_conMgr_set.insert(pConnector);
+	m_conMgr_set.insert(m_conMgr_set.begin(), pConnector);
 
 	pConnector->Start();
 
@@ -130,7 +137,7 @@ void CServer::OnAcceptHandle(const boost::system::error_code& e, CConnector* pCo
 	if (it != m_mapCallbackFun.end())
 	{
 		// 调用lua全局函数 连接通知
-		(*g_pKaguyaState)[it->second](pConnector, pConnector->m_iAddress);
+		g_kaguyaState[it->second](pConnector);
 	}
 
 	StartAccept();
@@ -139,24 +146,22 @@ void CServer::OnAcceptHandle(const boost::system::error_code& e, CConnector* pCo
 /////////////////////////////////////////////////////
 
 CConnector::CConnector(CServer* p_server):
-	m_pserver(p_server)
+	m_pserver(p_server), m_socket(g_IO)
 {
 	m_iAddress = reinterpret_cast<int>(this);
-	m_pSocket = new boost::asio::ip::tcp::socket(*g_pIO);
 }
 
 CConnector::~CConnector()
 {
-	if (m_pSocket->is_open())
+	if (m_socket.is_open())
 	{
-		m_pSocket->close();
+		m_socket.close();
 	}
-	delete m_pSocket;
 }
 
 void CConnector::Start()
 {
-	m_pSocket->async_read_some(boost::asio::buffer(m_buffer_array, sizeof(StruMessageHead)),
+	m_socket.async_read_some(boost::asio::buffer(m_buffer_array, sizeof(StruMessageHead)),
 		boost::bind(&CConnector::HeadReadHandle, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
@@ -172,7 +177,7 @@ void CConnector::Send(CMDID_LEN_TYPE msgId, const char* pData, unsigned int len)
 		std::cout << "[ERROR] " << "CClient::Send " << len << " data length limit" << std::endl;
 		return;
 	}
-	if (!m_pSocket->is_open())
+	if (!m_socket.is_open())
 	{
 		return;
 	}
@@ -181,7 +186,7 @@ void CConnector::Send(CMDID_LEN_TYPE msgId, const char* pData, unsigned int len)
 	pMsghead->msgId = msgId;
 	memcpy(g_pSendbuff + sizeof(StruMessageHead), pData, len);
 
-	m_pSocket->async_write_some(
+	m_socket.async_write_some(
 		boost::asio::buffer(g_pSendbuff, len + sizeof(StruMessageHead)),
 		boost::bind(&CConnector::SendHandle, this, boost::asio::placeholders::error)
 	);
@@ -189,14 +194,14 @@ void CConnector::Send(CMDID_LEN_TYPE msgId, const char* pData, unsigned int len)
 
 boost::asio::ip::tcp::socket* CConnector::GetSocket()
 {
-	return m_pSocket;
+	return &m_socket;
 }
 
 void CConnector::Stop()
 {
-	if (m_pSocket->is_open())
+	if (m_socket.is_open())
 	{
-		m_pSocket->close();
+		m_socket.close();
 	}
 	m_pserver->EraseConnector(this);
 }
@@ -224,7 +229,7 @@ void CConnector::HeadReadHandle(const boost::system::error_code& err, std::size_
 		return ;
 	}
 	
-	m_pSocket->async_read_some(boost::asio::buffer(m_buffer_array, pMsg->len),
+	m_socket.async_read_some(boost::asio::buffer(m_buffer_array, pMsg->len),
 			boost::bind(&CConnector::BodyReadHandle, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, pMsg->msgId));
 }
 void CConnector::BodyReadHandle(const boost::system::error_code& err, std::size_t bytes_transferred, CMDID_LEN_TYPE& msgId)
@@ -248,7 +253,7 @@ void CConnector::BodyReadHandle(const boost::system::error_code& err, std::size_
 	{
 		// 调用lua全局函数 数据通知
 		std::string str(m_buffer_array.data(), bytes_transferred);
-		(*g_pKaguyaState)[it->second](m_iAddress, msgId, str);
+		g_kaguyaState[it->second](m_iAddress, msgId, str);
 	}
 
 	// 继续监听链接
@@ -265,9 +270,14 @@ void CConnector::SendHandle(boost::system::error_code err)
 
 std::string CConnector::GetIP()
 {
-	if (m_pSocket->is_open())
+	if (m_socket.is_open())
 	{
-		return m_pSocket->remote_endpoint().address().to_string();
+		return m_socket.remote_endpoint().address().to_string();
 	}
 	return "";
+}
+
+int CConnector::GetAddress()
+{
+	return m_iAddress;
 }

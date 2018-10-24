@@ -4,10 +4,10 @@
 
 
 CHttp::CHttp()
-	:m_resolver(*g_pIO),
-	m_socket(*g_pIO),
+	:m_resolver(g_IO),
+	m_socket(g_IO),
 	m_request_stream(&m_request),
-	m_timer(*g_pIO, boost::posix_time::seconds(WEB_HTTP_TIMEOUT))
+	m_timer(g_IO, boost::posix_time::seconds(WEB_HTTP_TIMEOUT))
 {
 }
 
@@ -16,7 +16,7 @@ CHttp::~CHttp()
 {
 }
 
-void CHttp::GetPost(std::string strType, std::string strUrl, std::string strPage, std::string strData)
+void CHttp::GetPost(const char* pType, const char* pUrl, const char* pPage, const char* pPostData)
 {
 
 	//GET /?tn=93380420_hao_pg HTTP/1.1
@@ -40,25 +40,25 @@ void CHttp::GetPost(std::string strType, std::string strUrl, std::string strPage
 	m_timer.async_wait(boost::bind(&CHttp::OnClose, this, "time out"));
 
 	m_request_stream.flush();
-	if (strType == "POST")
+	if (0 == strncmp("POST", pType, 4))
 	{
-		m_request_stream << "POST " << strPage << " HTTP/1.0\r\n";
-		m_request_stream << "Host: " << strUrl << "\r\n";
+		m_request_stream << "POST " << pPage << " HTTP/1.0\r\n";
+		m_request_stream << "Host: " << pUrl << "\r\n";
 		m_request_stream << "Accept: */*\r\n";
-		m_request_stream << "Content-Length: " << strData.length() << "\r\n";
+		//m_request_stream << "Content-Length: " << strData.length() << "\r\n";
 		m_request_stream << "Content-Type: application/x-www-form-urlencoded\r\n";
 		m_request_stream << "Connection: close\r\n\r\n";
-		m_request_stream << strData;
+		m_request_stream << pPostData;
 	}
 	else
 	{
-		m_request_stream << "GET " << strPage << " HTTP/1.0\r\n";
-		m_request_stream << "Host: " << strUrl << "\r\n";
+		m_request_stream << "GET " << pPage << " HTTP/1.0\r\n";
+		m_request_stream << "Host: " << pUrl << "\r\n";
 		m_request_stream << "Accept: */*\r\n";
 		m_request_stream << "Connection: close\r\n\r\n";
 	}
 
-	m_resolver.async_resolve(strUrl, "http",
+	m_resolver.async_resolve(pUrl, "http",
 		boost::bind(&CHttp::handle_get_resolve, this,
 			boost::asio::placeholders::error,
 			boost::asio::placeholders::results));
@@ -242,7 +242,7 @@ void CHttp::handle_get_read_content(const boost::system::error_code& err)
 				int iAddress = reinterpret_cast<int>(this);
 				boost::asio::streambuf::const_buffers_type cbt = m_response.data();
 				std::string request_data(boost::asio::buffers_begin(cbt), boost::asio::buffers_end(cbt));
-				(*g_pKaguyaState)[it->second](iAddress, m_header, request_data);
+				g_kaguyaState[it->second](iAddress, m_header, request_data);
 			}
 		}
 	}
@@ -250,6 +250,18 @@ void CHttp::handle_get_read_content(const boost::system::error_code& err)
 	{
 		//std::cout << "[ERROR] " << "CHttp::handle_get_read_content " << err << std::endl;
 		OnClose(err.message());
+	}
+	else
+	{
+		std::map<unsigned short, std::string>::iterator it = m_mapCallbackFun.find(CGlobal::ON_DATA);
+		if (it != m_mapCallbackFun.end())
+		{
+			// 调用lua全局函数 接收数据通知
+			int iAddress = reinterpret_cast<int>(this);
+			boost::asio::streambuf::const_buffers_type cbt = m_response.data();
+			std::string request_data(boost::asio::buffers_begin(cbt), boost::asio::buffers_end(cbt));
+			g_kaguyaState[it->second](iAddress, m_header, request_data);
+		}
 	}
 }
 
@@ -266,7 +278,7 @@ void CHttp::OnClose(const std::string& msg)
 		{
 			// 调用lua全局函数 超时或者异常通知
 			int iAddress = reinterpret_cast<int>(this);
-			(*g_pKaguyaState)[it->second](iAddress, msg);
+			g_kaguyaState[it->second](iAddress, msg);
 		}
 	}
 }

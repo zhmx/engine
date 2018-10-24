@@ -1,25 +1,21 @@
 #include "Global.h"
 #include "boost/bind/bind.hpp"
 
-void BindInterfaceToLua(kaguya::State *pKaguyaState);
+void BindInterfaceToLua(kaguya::State& kaguyaState);
 
 void SecTimer(boost::system::error_code ec)
 {
 	if (ec)
 	{
 		std::cout << "[ERROR] " << "SecTimer error " << ec.message() << std::endl;
-		if (g_pIO && !g_pIO->stopped())
-		{
-			g_pIO->stop();
-		}
-		return ;
+		g_timer.cancel();
 	}
-	if (g_pTimer != NULL)
+	else
 	{
-		g_pTimer->expires_from_now(boost::posix_time::seconds(1));
-		g_pTimer->async_wait(SecTimer);
+		g_timer.expires_from_now(boost::posix_time::seconds(1));
+		g_timer.async_wait(SecTimer);
 		// 调用lua全局函数
-		(*g_pKaguyaState)[g_strSecTimer]();
+		g_kaguyaState[g_strSecTimer]();		
 	}
 }
 
@@ -39,14 +35,21 @@ int main(int argc, char* argv[])
 
 
 	//// cpp to lua
-	BindInterfaceToLua(g_pKaguyaState);
+	BindInterfaceToLua(g_kaguyaState);
 
 	//// lua script execute
-	g_pKaguyaState->dofile("main.lua");
+	if (2 == argc)
+	{
+		g_kaguyaState.dofile(argv[1]);
+	}
+	else
+	{
+		g_kaguyaState.dofile("main.lua");
+	}
 
 	// g_pTimer->expires_from_now(boost::posix_time::milliseconds(400));
-	g_pTimer->expires_from_now(boost::posix_time::seconds(1));
-	g_pTimer->async_wait(boost::bind(SecTimer, boost::asio::placeholders::error));
+	g_timer.expires_from_now(boost::posix_time::seconds(1));
+	g_timer.async_wait(boost::bind(SecTimer, boost::asio::placeholders::error));
 	//boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time();
 	//boost::posix_time::time_duration td = now.time_of_day();
 	//boost::posix_time::ptime now2 = boost::posix_time::microsec_clock::local_time();
@@ -56,29 +59,19 @@ int main(int argc, char* argv[])
 	{
 		(*g_pKaguyaState)[g_strSecTimer]();
 	}*/
-	g_pIO->run();
+	g_IO.run();
 
 
 	// 退出后资源的释放
 	mongoc_cleanup();
 
-	if (g_pTimer != NULL)
-	{
-		delete g_pTimer;
-		g_pTimer = NULL;
-	}
-
 	delete[] g_pSendbuff;
 	g_pSendbuff = NULL;
-
-	delete g_pKaguyaState;
-	g_pKaguyaState = NULL;
 
 	std::cout << "[NORMAL] " << "APP EXIT! please enter any character ...";
 
 	int iTmp = getchar(); // pause
-	delete g_pIO;
-	g_pIO = NULL;
+
 
 	return 0;
 }

@@ -2,7 +2,7 @@
 #include "boost/bind/bind.hpp"
 
 CClient::CClient()
-	:m_socket(*g_pIO)
+	:m_socket(g_IO)
 {
 
 }
@@ -25,7 +25,7 @@ bool CClient::Connect(std::string host, unsigned short usPort)
 	}
 	std::cout << "[NORMAL] " << "connect to host: " << host << " port: " << usPort  << std::endl;
 
-	boost::asio::ip::tcp::resolver _resolver(*g_pIO);
+	boost::asio::ip::tcp::resolver _resolver(g_IO);
 	boost::asio::async_connect(
 		m_socket,
 		_resolver.resolve(host, std::to_string(usPort)),
@@ -79,7 +79,7 @@ void CClient::Stop()
 	if (it_fun != m_mapCallbackFun.end())
 	{
 		// 调用lua全局函数 断线通知
-		(*g_pKaguyaState)[it_fun->second]();
+		g_kaguyaState[it_fun->second]();
 	}
 }
 
@@ -112,7 +112,7 @@ void CClient::ConnectHandle(const boost::system::error_code& err)
 	if (it_fun != m_mapCallbackFun.end())
 	{
 		// 调用lua全局函数 连接通知
-		kaguya::FunctionResults result = (*g_pKaguyaState)[it_fun->second]();
+		kaguya::FunctionResults result = g_kaguyaState[it_fun->second]();
 	}
 
 	m_socket.async_read_some(boost::asio::buffer(m_buffer_array, sizeof(StruMessageHead)),
@@ -168,7 +168,7 @@ void CClient::BodyReadHandle(const boost::system::error_code& err, std::size_t b
 	{
 		// 调用lua全局函数 数据通知
 		std::string str(m_buffer_array.data(), bytes_transferred);
-		(*g_pKaguyaState)[it->second](msgId, str);
+		g_kaguyaState[it->second](msgId, str);
 	}
 
 	m_socket.async_read_some(boost::asio::buffer(m_buffer_array, sizeof(StruMessageHead)),

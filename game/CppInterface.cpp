@@ -12,15 +12,10 @@ extern "C"
 	int luaopen_lpeg(lua_State *L);
 }
 
-void BindInterfaceToLua(kaguya::State *pKaguyaState)
+void BindInterfaceToLua(kaguya::State& kaguyaState)
 {
-	if (NULL == pKaguyaState)
-	{
-		std::cout << "[ERROR] " << "BindInterfaceToLua error pKaguyaState is NULL"<< std::endl;
-		return;
-	}
 	// global
-	(*pKaguyaState)["CGlobal"].setClass(kaguya::UserdataMetatable<CGlobal>()
+	kaguyaState["CGlobal"].setClass(kaguya::UserdataMetatable<CGlobal>()
 		.setConstructors<CGlobal()>()
 		.addStaticFunction("Stop", &CGlobal::Stop)
 		.addStaticFunction("md5", &CGlobal::md5)
@@ -29,24 +24,25 @@ void BindInterfaceToLua(kaguya::State *pKaguyaState)
 		.addStaticField("STATIC_ON_DISCONNECT", CGlobal::STATIC_ON_DISCONNECT)
 	);
 	// server connector
-	(*pKaguyaState)["CConnector"].setClass(kaguya::UserdataMetatable<CConnector>()
+	kaguyaState["CConnector"].setClass(kaguya::UserdataMetatable<CConnector>()
 		.setConstructors<CConnector(CServer*)>()
 		.addFunction("Start", &CConnector::Start)
 		.addFunction("Send", &CConnector::Send)
 		.addFunction("GetSocket", &CConnector::GetSocket)
 		.addFunction("GetIP", &CConnector::GetIP)
+		.addFunction("GetAddress", &CConnector::GetAddress)
 	);
 	// server
-	(*pKaguyaState)["CServer"].setClass(kaguya::UserdataMetatable<CServer>()
-		.setConstructors<CServer(unsigned short)>()
+	kaguyaState["CServer"].setClass(kaguya::UserdataMetatable<CServer>()
+		.setConstructors<CServer()>()
+		.addFunction("StartListen", &CServer::StartListen)
 		.addFunction("Stop", &CServer::Stop)
-		.addFunction("StartAccept", &CServer::StartAccept)
 		.addFunction("EraseConnector", &CServer::EraseConnector)
 		.addFunction("GetAcceptor", &CServer::GetAcceptor)
 		.addFunction("RegCallBack", &CServer::RegCallBack)
 	);
 	// client
-	(*pKaguyaState)["CClient"].setClass(kaguya::UserdataMetatable<CClient>()
+	kaguyaState["CClient"].setClass(kaguya::UserdataMetatable<CClient>()
 		.setConstructors<CClient()>()
 		.addFunction("Connect", &CClient::Connect)
 		.addFunction("Send", &CClient::Send)
@@ -54,7 +50,7 @@ void BindInterfaceToLua(kaguya::State *pKaguyaState)
 		.addFunction("RegCallBack", &CClient::RegCallBack)
 	);
 	// mongodb
-	(*pKaguyaState)["CMongoCollection"].setClass(kaguya::UserdataMetatable<CMongoCollection>()
+	kaguyaState["CMongoCollection"].setClass(kaguya::UserdataMetatable<CMongoCollection>()
 		.setConstructors<CMongoCollection(mongoc_client_t *, std::string, std::string, bool &)>()
 		.addFunction("Insert", &CMongoCollection::Insert)
 		.addFunction("Update", &CMongoCollection::Update)
@@ -63,13 +59,13 @@ void BindInterfaceToLua(kaguya::State *pKaguyaState)
 		.addFunction("Drop", &CMongoCollection::Drop)
 		.addFunction("EnsureIndex", &CMongoCollection::EnsureIndex)
 	);
-	(*pKaguyaState)["CMongo"].setClass(kaguya::UserdataMetatable<CMongo>()
+	kaguyaState["CMongo"].setClass(kaguya::UserdataMetatable<CMongo>()
 		.setConstructors<CMongo(std::string, unsigned int, std::string, std::string)>()
 		.addFunction("GetDB", &CMongo::GetDB)
 		.addFunction("GetCollection", &CMongo::GetCollection)
 	);
 	// web http post get
-	(*pKaguyaState)["CHttp"].setClass(kaguya::UserdataMetatable<CHttp>()
+	kaguyaState["CHttp"].setClass(kaguya::UserdataMetatable<CHttp>()
 		.setConstructors<CHttp()>()
 		.addFunction("GetPost", &CHttp::GetPost)
 		.addFunction("RegCallBack", &CHttp::RegCallBack)
@@ -77,6 +73,6 @@ void BindInterfaceToLua(kaguya::State *pKaguyaState)
 		.addFunction("GetAddress", &CHttp::GetAddress)
 	);
 
-	pKaguyaState->openlib("sproto.core", &luaopen_sproto_core);
-	pKaguyaState->openlib("lpeg", &luaopen_lpeg);
+	kaguyaState.openlib("sproto.core", &luaopen_sproto_core);
+	kaguyaState.openlib("lpeg", &luaopen_lpeg);
 }

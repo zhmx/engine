@@ -16,10 +16,7 @@ public:
 	void Send(CMDID_LEN_TYPE msgId, const char* pData, unsigned int len);
 	boost::asio::ip::tcp::socket* GetSocket();
 	std::string GetIP();
-
-
-public:
-	int m_iAddress;
+	int GetAddress();
 
 
 private:
@@ -30,18 +27,19 @@ private:
 	void SendHandle(boost::system::error_code err);
 
 	CServer* m_pserver;
-	boost::asio::ip::tcp::socket* m_pSocket;
+	boost::asio::ip::tcp::socket m_socket;
 	boost::array<char, MAX_BUFF_SIZE> m_buffer_array;
+	int m_iAddress;
 };
 
 class CServer
 {
 public:
-	CServer(unsigned short usPort);
+	CServer();
 	~CServer();
 
 	void Stop();
-	void StartAccept();
+	void StartListen(unsigned short usPort = 0);
 	std::set<CConnector*>::iterator EraseConnector(CConnector* pConnector);
 	boost::asio::ip::tcp::acceptor* GetAcceptor();
 	bool RegCallBack(unsigned short type, std::string strCallbackFun);
@@ -50,9 +48,11 @@ public:
 	std::map<unsigned short, std::string> m_mapCallbackFun;
 
 private:
+	void StartAccept();
 	void OnAcceptHandle(const boost::system::error_code& e, CConnector* pConnector);
 
-	boost::asio::ip::tcp::acceptor *m_pAcceptor;
+	boost::asio::ip::tcp::acceptor m_acceptor;
 	std::set<CConnector*> m_conMgr_set;
+	unsigned short m_usPort;
 };
 
