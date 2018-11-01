@@ -23,7 +23,7 @@ typedef unsigned int CMDID_LEN_TYPE;// 消息id长度
 #define MAXPORT 65535			// 监听最大端口
 #define MINPORT	80				// 监听最小端口
 #define MIN_SEND_SIZE 2			// 最小发送字节
-#define WEB_HTTP_TIMEOUT 4		// web http 超时时间
+#define WEB_HTTP_TIMEOUT 10		// web http 超时时间
 
 struct StruMessageHead
 {
