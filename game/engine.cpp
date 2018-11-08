@@ -1,5 +1,6 @@
 #include "Global.h"
 #include "boost/bind/bind.hpp"
+#include "mongoc.h"
 
 void BindInterfaceToLua(kaguya::State& kaguyaState);
 

@@ -3,10 +3,11 @@
 #include "Global.h"
 #include <set>
 #include "boost/array.hpp"
+#include <memory>
 
 class CServer;
 
-class CConnector
+class CConnector : std::enable_shared_from_this<CConnector>
 {
 public:
 	CConnector(CServer* p_server);
@@ -32,7 +33,7 @@ private:
 	int m_iAddress;
 };
 
-class CServer
+class CServer : std::enable_shared_from_this<CServer>
 {
 public:
 	CServer();

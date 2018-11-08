@@ -173,6 +173,7 @@
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="sproto\lsproto.c" />
     <ClCompile Include="sproto\sproto.c" />
+    <ClCompile Include="WebSocket.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h" />
@@ -189,6 +190,7 @@
     <ClInclude Include="Server.h" />
     <ClInclude Include="sproto\msvcint.h" />
     <ClInclude Include="sproto\sproto.h" />
+    <ClInclude Include="WebSocket.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

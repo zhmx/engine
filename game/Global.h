@@ -3,9 +3,6 @@
 #include <iostream>
 #include "boost/asio.hpp"
 #include "kaguya/kaguya.hpp"
-#include "kaguya/another_binding_api.hpp"
-#include "mongoc.h"
-#include "bson/bcon.h"
 
 extern kaguya::State g_kaguyaState;
 extern lua_State *g_luaState;
@@ -13,7 +10,7 @@ extern boost::asio::io_context g_IO;
 extern boost::asio::deadline_timer g_timer;
 extern boost::asio::signal_set g_single;
 extern std::string g_strSecTimer;
-extern char* g_pSendbuff;
+extern char* g_pSendbuff;			// 多线程不可用
 
 // 数据包 头(数据包长度)+包体
 typedef unsigned int BODY_LEN_TYPE;	// 数据包长度

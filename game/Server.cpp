@@ -64,7 +64,7 @@ void CServer::StartAccept()
 	CConnector *p_connector = new CConnector(this); // 创建新的链接对象
 	m_acceptor.async_accept(
 		*(p_connector->GetSocket()),
-		boost::bind(&CServer::OnAcceptHandle, this, boost::asio::placeholders::error, p_connector)
+		boost::bind(&CServer::OnAcceptHandle, shared_from_this(), boost::asio::placeholders::error, p_connector)
 	);
 }
 
@@ -162,7 +162,7 @@ CConnector::~CConnector()
 void CConnector::Start()
 {
 	m_socket.async_read_some(boost::asio::buffer(m_buffer_array, sizeof(StruMessageHead)),
-		boost::bind(&CConnector::HeadReadHandle, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
+		boost::bind(&CConnector::HeadReadHandle, shared_from_this(), boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
 }
 
 void CConnector::Send(CMDID_LEN_TYPE msgId, const char* pData, unsigned int len)
@@ -188,7 +188,7 @@ void CConnector::Send(CMDID_LEN_TYPE msgId, const char* pData, unsigned int len)
 
 	m_socket.async_write_some(
 		boost::asio::buffer(g_pSendbuff, len + sizeof(StruMessageHead)),
-		boost::bind(&CConnector::SendHandle, this, boost::asio::placeholders::error)
+		boost::bind(&CConnector::SendHandle, shared_from_this(), boost::asio::placeholders::error)
 	);
 }
 
@@ -230,7 +230,7 @@ void CConnector::HeadReadHandle(const boost::system::error_code& err, std::size_
 	}
 	
 	m_socket.async_read_some(boost::asio::buffer(m_buffer_array, pMsg->len),
-			boost::bind(&CConnector::BodyReadHandle, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, pMsg->msgId));
+			boost::bind(&CConnector::BodyReadHandle, shared_from_this(), boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, pMsg->msgId));
 }
 void CConnector::BodyReadHandle(const boost::system::error_code& err, std::size_t bytes_transferred, CMDID_LEN_TYPE& msgId)
 {

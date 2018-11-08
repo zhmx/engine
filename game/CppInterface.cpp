@@ -4,7 +4,7 @@
 #include "Client.h"
 #include "DB.h"
 #include "Http.h"
-
+#include "WebSocket.h"
 
 extern "C"
 {
@@ -72,6 +72,17 @@ void BindInterfaceToLua(kaguya::State& kaguyaState)
 		.addFunction("Stop", &CHttp::Stop)
 		.addFunction("GetAddress", &CHttp::GetAddress)
 	);
+	// websocket session
+	kaguyaState["WSSession"].setClass(kaguya::UserdataMetatable<WSSession>()
+		.setConstructors<WSSession()>()
+		.addFunction("Run", &WSSession::Run)
+	);
+	// websocket
+	kaguyaState["CWebSocket"].setClass(kaguya::UserdataMetatable<CWebSocket>()
+		.setConstructors<CWebSocket()>()
+		.addFunction("Start", &CWebSocket::Start)
+	);
+
 
 	kaguyaState.openlib("sproto.core", &luaopen_sproto_core);
 	kaguyaState.openlib("lpeg", &luaopen_lpeg);
